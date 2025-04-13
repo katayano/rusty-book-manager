@@ -1,24 +1,22 @@
 use std::net::{Ipv4Addr, SocketAddr};
 
-use ::axum::{Router, routing::get};
+use ::axum::{Router, http::StatusCode, routing::get};
+use anyhow::Result;
 use tokio::net::TcpListener;
 
-// ハンドラ
-// どのリクエストでもHello worldを返す
-async fn hello_world() -> &'static str {
-    "Hello world!"
+// ヘルスチェック用のハンドラ
+pub async fn health_check() -> StatusCode {
+    StatusCode::OK
 }
 
-// tokioランタイム上で動かすために必要なマクロ
-// このマクロを使用すると、main関数を非同期化できる
 #[tokio::main]
-async fn main() {
-    // ルーター
-    let app = Router::new().route("/hello", get(hello_world));
-    // 8080ポートでリクエストを待ち受ける
+async fn main() -> Result<()> {
+    // ヘルスチェック用のルーター
+    let app = Router::new().route("/health", get(health_check));
     let addr = SocketAddr::new(Ipv4Addr::LOCALHOST.into(), 8080);
-    let listener = TcpListener::bind(addr).await.unwrap();
+    let listener = TcpListener::bind(addr).await?;
+
     println!("Listening on {}", addr);
-    // サーバーを起動
-    axum::serve(listener, app).await.unwrap();
+
+    Ok(axum::serve(listener, app).await?)
 }
