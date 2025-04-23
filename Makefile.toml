@@ -37,7 +37,7 @@ JAEGER_PORT = 6831
 
 # ビルド前にnameで指定したタスクを実行
 [tasks.before-build]
-run_task = [{ name = ["compose-up-db", "compose-up-redis"] }]
+run_task = [{ name = ["compose-up-db", "migrate", "compose-up-redis"] }]
 
 # docker compose buildでRustプロセスのイメージ作成
 [tasks.compose-build-app]
@@ -132,6 +132,7 @@ run_task = "test"
 [tasks.migrate]
 extend = "set-env-local"
 install_crate = { crate_name = "sqlx-cli", binary = "sqlx", test_arg = "--help", version = "0.7.3" }
+# sleepを入れることで、DBが起動中の場合にリトライするようにする
 script = '''
 #!/bin/bash
 until sqlx migrate run --source adapter/migrations; do
@@ -139,6 +140,8 @@ until sqlx migrate run --source adapter/migrations; do
 done
 '''
 
+# tasks.migrate以外のsqlxコマンドはここで実行
+# 例: cargo make sqlx migrate revert
 [tasks.sqlx]
 extend = "set-env-local"
 install_crate = { crate_name = "sqlx-cli", binary = "sqlx", test_arg = "--help", version = "0.7.3" }
