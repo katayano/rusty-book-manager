@@ -148,6 +148,13 @@ install_crate = { crate_name = "sqlx-cli", binary = "sqlx", test_arg = "--help",
 command = "sqlx"
 args = ["${@}", "--source", "adapter/migrations"]
 
+# オフラインでのコンパイル時検証をサポートするためのクエリメタデータを生成
+[tasks.sqlx-prepare]
+extend = "set-env-local"
+dependencies = ["before-build"]
+command = "cargo"
+args = ["sqlx", "prepare"]
+
 [tasks.psql]
 extend = "set-env-local"
 command = "docker"
