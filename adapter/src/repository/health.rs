@@ -20,3 +20,17 @@ impl HealthCheckRepository for HealthCheckRepositoryImpl {
             .is_ok()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[sqlx::test]
+    async fn test_check_db(pool: sqlx::PgPool) {
+        // HealthCheckRepositoryImplを初期化
+        let repository = HealthCheckRepositoryImpl::new(ConnectionPool::new(pool));
+
+        let check_result = repository.check_db().await;
+        assert!(check_result);
+    }
+}

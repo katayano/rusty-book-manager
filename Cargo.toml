@@ -32,7 +32,9 @@ tokio = { version = "1.44.2", features = ["full"] }
 rstest = "0.25.0"
 async-trait = "0.1.88"
 derive-new = "0.7.0"
-
+uuid = { version = "1.16.0", features = ["v4", "serde"] }
+serde = { version = "1.0.219", features = ["derive"] }
+thiserror = "2.0.12"
 
 [dependencies]
 adapter.workspace = true

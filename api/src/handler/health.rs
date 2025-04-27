@@ -8,7 +8,7 @@ pub async fn health_check() -> StatusCode {
 
 /// DBヘルスチェック用のハンドラ
 pub async fn health_check_db(State(registry): State<AppRegistry>) -> StatusCode {
-    // リポジトリの
+    // 注入されたリポジトリを使ってDBのヘルスチェックを行う
     if registry.health_check_repository().check_db().await {
         StatusCode::OK
     } else {

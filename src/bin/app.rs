@@ -2,6 +2,7 @@ use std::net::{Ipv4Addr, SocketAddr};
 
 use adapter::database::connect_database_with;
 use anyhow::{Error, Result};
+use api::route::book::build_book_routers;
 use api::route::health::build_health_check_routers;
 use axum::Router;
 use registry::AppRegistry;
@@ -26,6 +27,7 @@ async fn bootstrap() -> Result<()> {
     // ルーターのStateにAppRegistryを登録し、各ハンドラで使えるようにする
     let app = Router::new()
         .merge(build_health_check_routers())
+        .merge(build_book_routers())
         .with_state(registry);
 
     // サーバーを起動
