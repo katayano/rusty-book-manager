@@ -1,7 +1,9 @@
 [package]
 name = "rusty-book-manager"
 version = "0.1.0"
-edition = "2024"
+edition.workspace = true
+publish.workspace = true
+license.workspace = true
 
 [[bin]]
 name = "app"
@@ -9,6 +11,11 @@ path = "src/bin/app.rs"
 
 [workspace]
 members = ["api", "kernel", "adapter", "shared", "registry"]
+
+[workspace.package]
+edition = "2024"
+publish = false
+license = "MIT"
 
 [workspace.dependencies]
 adapter = { path = "./adapter" }
@@ -20,7 +27,7 @@ registry = { path = "./registry" }
 anyhow = "1.0.97"
 axum = { version = "0.8.3", features = ["macros"] }
 dotenv = "0.15.0"
-sqlx = { version = "0.8.3", features = [
+sqlx = { version = "0.8.3", default-features = false, features = [
     "runtime-tokio",
     "uuid",
     "chrono",
@@ -35,6 +42,19 @@ derive-new = "0.7.0"
 uuid = { version = "1.16.0", features = ["v4", "serde"] }
 serde = { version = "1.0.219", features = ["derive"] }
 thiserror = "2.0.12"
+utoipa = { version = "5.3.1", features = ["axum_extras", "uuid", "chrono"] }
+chrono = { version = "0.4.41", default-features = false, features = ["serde"] }
+secrecy = "0.10.3"
+strum = { version = "0.27.1", features = ["derive"] }
+mockall = "0.13.1"
+redis = { version = "0.30.0", features = ["tokio-rustls-comp"] }
+bcrypt = "0.17.0"
+itertools = "0.14.0"
+tower = "0.5.2"
+tracing = { version = "0.1.41", features = ["log"] }
+axum-extra = { version = "0.10.1", features = ["typed-header"] }
+tokio-stream = "0.1.17"
+garde = { version = "0.22.0", features = ["derive", "email"] }
 
 [dependencies]
 adapter.workspace = true
@@ -44,4 +64,15 @@ shared.workspace = true
 anyhow.workspace = true
 tokio.workspace = true
 axum.workspace = true
-sqlx.workspace = true
+utoipa.workspace = true
+tracing.workspace = true
+
+tower-http = { version = "0.6.2", features = ["cors", "trace"] }
+utoipa-redoc = { version = "6.0.0", features = ["axum"] }
+tracing-subscriber = { version = "0.3.19", features = ["env-filter", "json"] }
+opentelemetry = "0.29.1"
+tracing-opentelemetry = "0.30.0"
+opentelemetry-jaeger = { version = "0.22.0", features = ["rt-tokio"] }
+
+[profile.dev.package.sqlx-macros]
+opt-level = 3
