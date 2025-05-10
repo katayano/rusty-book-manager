@@ -2,11 +2,10 @@ use axum::{
     Json,
     extract::{Path, State},
     http::StatusCode,
-    response::{IntoResponse, Response},
 };
+use kernel::model::id::BookId;
 use registry::AppRegistry;
-use shared::error::AppResult;
-use uuid::Uuid;
+use shared::error::{AppError, AppResult};
 
 use crate::model::book::{BookResponse, CreateBookRequest};
 
@@ -37,7 +36,7 @@ pub async fn show_book_list(
 /// IDに一致する書籍を取得するハンドラ
 pub async fn show_book(
     State(registry): State<AppRegistry>,
-    Path(book_id): Path<Uuid>,
+    Path(book_id): Path<BookId>,
 ) -> AppResult<Json<BookResponse>> {
     registry
         .book_repository()
@@ -45,6 +44,6 @@ pub async fn show_book(
         .await
         .and_then(|bc| match bc {
             Some(bc) => Ok(Json(bc.into())),
-            None => Err(anyhow::anyhow!("The specific book was not found")),
+            None => Err(AppError::EntityNotFound("not found".into())),
         })
 }

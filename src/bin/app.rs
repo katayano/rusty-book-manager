@@ -1,7 +1,7 @@
 use std::net::{Ipv4Addr, SocketAddr};
 
 use adapter::database::connect_database_with;
-use anyhow::{Context, Error, Result};
+use anyhow::{Context, Result};
 use api::route::book::build_book_routers;
 use api::route::health::build_health_check_routers;
 use axum::Router;
@@ -9,11 +9,9 @@ use registry::AppRegistry;
 use shared::config::AppConfig;
 use shared::env::{Environment, which};
 use tokio::net::TcpListener;
-use tokio::sync::broadcast::error;
 use tower_http::LatencyUnit;
 use tower_http::trace::{DefaultMakeSpan, DefaultOnRequest, DefaultOnResponse, TraceLayer};
 use tracing::Level;
-use tracing::subscriber;
 use tracing_subscriber::EnvFilter;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
@@ -90,7 +88,7 @@ async fn bootstrap() -> Result<()> {
                 error.message = %e,
                 "Unexpected error"
             )
-        });
+        })
 }
 
 // #[tokio::test]

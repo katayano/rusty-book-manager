@@ -2,10 +2,12 @@
 
 use async_trait::async_trait;
 use derive_new::new;
-use kernel::model::book::{Book, event::CreateBook};
+use kernel::model::{
+    book::{Book, event::CreateBook},
+    id::BookId,
+};
 use kernel::repository::book::BookRepository;
 use shared::error::AppError;
-use uuid::Uuid;
 
 use crate::database::ConnectionPool;
 use crate::database::model::book::BookRow;
@@ -58,7 +60,7 @@ impl BookRepository for BookRepositoryImpl {
         Ok(rows.into_iter().map(Book::from).collect())
     }
     /// 書籍を取得する
-    async fn find_by_id(&self, book_id: Uuid) -> AppResult<Option<Book>> {
+    async fn find_by_id(&self, book_id: BookId) -> AppResult<Option<Book>> {
         let row = sqlx::query_as!(
             BookRow,
             r#"
@@ -66,7 +68,7 @@ impl BookRepository for BookRepositoryImpl {
             FROM books
             WHERE book_id = $1
             "#,
-            book_id,
+            book_id as _, // query_as!マクロによるコンパイル時の型チェックを無効化（sqlx::query!マクロのドキュメントに記載されている）
         )
         .fetch_optional(self.db.inner_ref())
         .await
