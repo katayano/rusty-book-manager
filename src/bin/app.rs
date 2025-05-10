@@ -1,17 +1,50 @@
 use std::net::{Ipv4Addr, SocketAddr};
 
 use adapter::database::connect_database_with;
-use anyhow::{Error, Result};
+use anyhow::{Context, Error, Result};
 use api::route::book::build_book_routers;
 use api::route::health::build_health_check_routers;
 use axum::Router;
 use registry::AppRegistry;
 use shared::config::AppConfig;
+use shared::env::{Environment, which};
 use tokio::net::TcpListener;
+use tokio::sync::broadcast::error;
+use tower_http::LatencyUnit;
+use tower_http::trace::{DefaultMakeSpan, DefaultOnRequest, DefaultOnResponse, TraceLayer};
+use tracing::Level;
+use tracing::subscriber;
+use tracing_subscriber::EnvFilter;
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::util::SubscriberInitExt;
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    init_logger()?;
     bootstrap().await
+}
+
+/// ロガーを初期化する関数
+fn init_logger() -> Result<()> {
+    let log_level = match which() {
+        Environment::Development => "debug",
+        Environment::Production => "info",
+    };
+    // ログレベルを設定
+    let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| log_level.into());
+
+    // ログのフォーマットを設定
+    let subscriber = tracing_subscriber::fmt::layer()
+        .with_file(true)
+        .with_line_number(true)
+        .with_target(false);
+
+    // ロガーを初期化
+    tracing_subscriber::registry()
+        .with(subscriber)
+        .with(env_filter)
+        .try_init()?;
+    Ok(())
 }
 
 /// サーバー起動の関数
@@ -28,15 +61,36 @@ async fn bootstrap() -> Result<()> {
     let app = Router::new()
         .merge(build_health_check_routers())
         .merge(build_book_routers())
+        // リクエストとレスポンス時にログ出力するレイヤーを追加
+        .layer(
+            TraceLayer::new_for_http()
+                .make_span_with(DefaultMakeSpan::new().level(Level::INFO))
+                .on_request(DefaultOnRequest::new().level(Level::INFO))
+                .on_response(
+                    DefaultOnResponse::new()
+                        .level(Level::INFO)
+                        .latency_unit(LatencyUnit::Micros),
+                ),
+        )
         .with_state(registry);
 
     // サーバーを起動
     let addr = SocketAddr::new(Ipv4Addr::LOCALHOST.into(), 8080);
     let listener = TcpListener::bind(addr).await?;
 
-    println!("Listening on {}", addr);
+    tracing::info!("Listening on {}", addr);
 
-    axum::serve(listener, app).await.map_err(Error::from)
+    axum::serve(listener, app)
+        .await
+        .context("Unexpected error occurred in server")
+        // 起動失敗した際のエラーログを出力
+        .inspect_err(|e| {
+            tracing::error!(
+                error.cause_chain = ?e,
+                error.message = %e,
+                "Unexpected error"
+            )
+        });
 }
 
 // #[tokio::test]
