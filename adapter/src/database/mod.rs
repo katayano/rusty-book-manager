@@ -1,6 +1,9 @@
 //! DB接続を行うモジュール
 
-use shared::config::DatabaseConfig;
+use shared::{
+    config::DatabaseConfig,
+    error::{AppError, AppResult},
+};
 use sqlx::{PgPool, postgres::PgConnectOptions};
 
 pub mod model;
@@ -28,6 +31,10 @@ impl ConnectionPool {
     /// sqlx::PgPoolを取得する
     pub fn inner_ref(&self) -> &PgPool {
         &self.0
+    }
+    /// トランザクションを開始する
+    pub async fn begin(&self) -> AppResult<sqlx::Transaction<'_, sqlx::Postgres>> {
+        self.0.begin().await.map_err(AppError::TransactionError)
     }
 }
 

@@ -4,7 +4,7 @@ use crate::model::{id::UserId, role::Role};
 pub struct CreateUser {
     pub name: String,
     pub email: String,
-    pub password: Role,
+    pub password: String,
 }
 
 #[derive(Debug)]
