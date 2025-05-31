@@ -195,7 +195,7 @@ mod tests {
     use kernel::{model::user::event::CreateUser, repository::user::UserRepository};
 
     #[sqlx::test]
-    async fn test_create_book(pool: sqlx::PgPool) -> AppResult<()> {
+    async fn test_create_book(pool: sqlx::PgPool) -> anyhow::Result<()> {
         sqlx::query!(
             r#"
             INSERT INTO roles(name) VALUES ('Admin'), ('User')
