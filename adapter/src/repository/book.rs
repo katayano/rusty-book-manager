@@ -2,20 +2,21 @@
 
 use async_trait::async_trait;
 use derive_new::new;
+use std::collections::HashMap;
+
 use kernel::model::{
     book::{
-        Book, BookListOptions,
+        Book, BookListOptions, Checkout,
         event::{CreateBook, DeleteBook, UpdateBook},
     },
     id::{BookId, UserId},
     list::PaginatedList,
 };
 use kernel::repository::book::BookRepository;
-use shared::error::AppError;
+use shared::error::{AppError, AppResult};
 
 use crate::database::ConnectionPool;
-use crate::database::model::book::{BookRow, PaginatedBookRow};
-use shared::error::AppResult;
+use crate::database::model::book::{BookCheckoutRow, BookRow, PaginatedBookRow};
 
 #[derive(new)]
 pub struct BookRepositoryImpl {
@@ -94,8 +95,16 @@ impl BookRepository for BookRepositoryImpl {
         // sqlx::Error型をAppError型に変換する
         .map_err(AppError::SpecificOperationError)?;
 
-        // BookRowをBookに変換
-        let items = rows.into_iter().map(Book::from).collect();
+        let book_ids = rows.iter().map(|book| book.book_id).collect::<Vec<_>>();
+        let mut checkouts = self.find_checktouts(&book_ids).await?;
+
+        let items = rows
+            .into_iter()
+            .map(|row| {
+                let checkout = checkouts.remove(&row.book_id);
+                row.into_book(checkout)
+            })
+            .collect();
         Ok(PaginatedList {
             total,
             limit,
@@ -128,7 +137,15 @@ impl BookRepository for BookRepositoryImpl {
         .map_err(AppError::SpecificOperationError)?;
 
         // BookRowをBookに変換して返す
-        Ok(row.map(Book::from))
+        match row {
+            Some(row) => {
+                let book_id = row.book_id;
+                let mut checkouts = self.find_checktouts(&[book_id]).await?;
+                let checkout = checkouts.remove(&book_id);
+                Ok(Some(row.into_book(checkout)))
+            }
+            None => Ok(None),
+        }
     }
 
     /// 書籍を更新する
@@ -185,6 +202,35 @@ impl BookRepository for BookRepositoryImpl {
         }
 
         Ok(())
+    }
+}
+
+impl BookRepositoryImpl {
+    /// 指定された書籍IDの貸出情報を取得する
+    async fn find_checktouts(&self, book_ids: &[BookId]) -> AppResult<HashMap<BookId, Checkout>> {
+        let res = sqlx::query_as!(
+            BookCheckoutRow,
+            r#"
+            SELECT 
+                c.checkout_id,
+                c.book_id,
+                u.user_id,
+                u.name AS user_name,
+                c.checked_out_at
+            FROM checkouts AS c
+            INNER JOIN users AS u USING(user_id)
+            WHERE c.book_id = ANY($1)
+            "#,
+            &book_ids as _
+        )
+        .fetch_all(self.db.inner_ref())
+        .await
+        .map_err(AppError::SpecificOperationError)?
+        .into_iter()
+        .map(|checkout| (checkout.book_id, Checkout::from(checkout)))
+        .collect();
+
+        Ok(res)
     }
 }
 
@@ -249,6 +295,7 @@ mod tests {
             isbn,
             description,
             owner,
+            ..
         } = book.unwrap();
         assert_eq!(id, book_id);
         assert_eq!(title, "Test Title");
