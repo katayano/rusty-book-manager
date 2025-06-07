@@ -6,12 +6,13 @@ use std::{
 use adapter::{database::connect_database_with, redis::RedisClient};
 use anyhow::{Context, Result};
 use api::route::{auth::build_auth_routers, v1};
-use axum::Router;
+use axum::{Router, http::Method};
 use registry::AppRegistry;
 use shared::config::AppConfig;
 use shared::env::{Environment, which};
 use tokio::net::TcpListener;
 use tower_http::LatencyUnit;
+use tower_http::cors::{self, CorsLayer};
 use tower_http::trace::{DefaultMakeSpan, DefaultOnRequest, DefaultOnResponse, TraceLayer};
 use tracing::Level;
 use tracing_subscriber::EnvFilter;
@@ -63,6 +64,8 @@ async fn bootstrap() -> Result<()> {
     let app = Router::new()
         .merge(v1::routes())
         .merge(build_auth_routers())
+        // CORSの設定
+        .layer(cors())
         // リクエストとレスポンス時にログ出力するレイヤーを追加
         .layer(
             TraceLayer::new_for_http()
@@ -95,15 +98,9 @@ async fn bootstrap() -> Result<()> {
         })
 }
 
-// #[tokio::test]
-// async fn health_check_works() {
-//     // awaitして結果を得る
-//     let status_code = health_check().await;
-//     assert_eq!(status_code, StatusCode::OK);
-// }
-
-// #[sqlx::test]
-// async fn health_check_db_works(pool: sqlx::PgPool) {
-//     let status_code = health_check_db(State(pool)).await;
-//     assert_eq!(status_code, StatusCode::OK);
-// }
+fn cors() -> CorsLayer {
+    CorsLayer::new()
+        .allow_headers(cors::Any)
+        .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE])
+        .allow_origin(cors::Any)
+}
