@@ -80,3 +80,30 @@ async fn test_show_book_list_with_query_200(
 
     Ok(())
 }
+
+/// limitやoffsetが不正な値の場合の異常系テスト
+#[rstest]
+#[case("/books?limit=-1")]
+#[case("/books?offset=-10")]
+#[case("/books?limit=abc")]
+#[case("/books?offset=xyz")]
+#[tokio::test]
+async fn test_show_book_list_with_query_400(
+    mut fixture: registry::MockAppRegistryExt,
+    #[case] path: &str,
+) -> anyhow::Result<()> {
+    // モックの設定（呼ばれないことを期待）
+    fixture.expect_book_repository().returning(|| {
+        let mut mock = MockBookRepository::new();
+        mock.expect_find_all().never();
+        Arc::new(mock)
+    });
+
+    let router: axum::Router = make_router(fixture);
+
+    let request = Request::get(&v1(path)).bearer().body(Body::empty())?;
+    let resp = router.oneshot(request).await?;
+    assert_eq!(resp.status(), axum::http::StatusCode::BAD_REQUEST);
+
+    Ok(())
+}
