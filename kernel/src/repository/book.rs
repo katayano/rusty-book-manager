@@ -11,6 +11,7 @@ use crate::model::{
 };
 use shared::error::AppResult;
 
+#[mockall::automock]
 #[async_trait]
 pub trait BookRepository: Send + Sync {
     /// 書籍を登録する

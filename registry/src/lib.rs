@@ -16,7 +16,7 @@ use shared::config::AppConfig;
 
 /// DIコンテナの構造体
 #[derive(Clone)]
-pub struct AppRegistry {
+pub struct AppRegistryImpl {
     health_check_repository: Arc<dyn HealthCheckRepository>,
     book_repository: Arc<dyn BookRepository>,
     auth_repository: Arc<dyn AuthRepository>,
@@ -24,7 +24,7 @@ pub struct AppRegistry {
     checkout_repository: Arc<dyn CheckoutRepository>,
 }
 
-impl AppRegistry {
+impl AppRegistryImpl {
     /// DIコンテナを作成する
     pub fn new(db: ConnectionPool, redis_client: Arc<RedisClient>, app_config: AppConfig) -> Self {
         let health_check_repository = Arc::new(HealthCheckRepositoryImpl::new(db.clone()));
@@ -44,26 +44,42 @@ impl AppRegistry {
             checkout_repository,
         }
     }
+}
 
+#[mockall::automock]
+pub trait AppRegistryExt {
     /// ヘルスチェックリポジトリを取得する
-    pub fn health_check_repository(&self) -> Arc<dyn HealthCheckRepository> {
+    fn health_check_repository(&self) -> Arc<dyn HealthCheckRepository>;
+    /// 書籍リポジトリを取得する
+    fn book_repository(&self) -> Arc<dyn BookRepository>;
+    /// 認証リポジトリを取得する
+    fn auth_repository(&self) -> Arc<dyn AuthRepository>;
+    /// ユーザリポジトリを取得する
+    fn user_repository(&self) -> Arc<dyn UserRepository>;
+    /// 貸出リポジトリを取得する
+    fn checkout_repository(&self) -> Arc<dyn CheckoutRepository>;
+}
+
+impl AppRegistryExt for AppRegistryImpl {
+    fn health_check_repository(&self) -> Arc<dyn HealthCheckRepository> {
         self.health_check_repository.clone()
     }
 
-    /// 書籍リポジトリを取得する
-    pub fn book_repository(&self) -> Arc<dyn BookRepository> {
+    fn book_repository(&self) -> Arc<dyn BookRepository> {
         self.book_repository.clone()
     }
-    /// 認証リポジトリを取得する
-    pub fn auth_repository(&self) -> Arc<dyn AuthRepository> {
+
+    fn auth_repository(&self) -> Arc<dyn AuthRepository> {
         self.auth_repository.clone()
     }
-    /// ユーザリポジトリを取得する
-    pub fn user_repository(&self) -> Arc<dyn UserRepository> {
+
+    fn user_repository(&self) -> Arc<dyn UserRepository> {
         self.user_repository.clone()
     }
-    /// 貸出リポジトリを取得する
-    pub fn checkout_repository(&self) -> Arc<dyn CheckoutRepository> {
+
+    fn checkout_repository(&self) -> Arc<dyn CheckoutRepository> {
         self.checkout_repository.clone()
     }
 }
+
+pub type AppRegistry = Arc<dyn AppRegistryExt + Send + Sync + 'static>;

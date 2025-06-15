@@ -6,6 +6,7 @@ use crate::model::{
 };
 use shared::error::AppResult;
 
+#[mockall::automock]
 #[async_trait]
 pub trait AuthRepository: Send + Sync {
     /// アクセストークンからユーザーIDを取得する

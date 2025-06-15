@@ -7,7 +7,7 @@ use adapter::{database::connect_database_with, redis::RedisClient};
 use anyhow::{Context, Result};
 use api::route::{auth::build_auth_routers, v1};
 use axum::{Router, http::Method};
-use registry::AppRegistry;
+use registry::AppRegistryImpl;
 use shared::config::AppConfig;
 use shared::env::{Environment, which};
 use tokio::net::TcpListener;
@@ -56,8 +56,8 @@ async fn bootstrap() -> Result<()> {
     let pool = connect_database_with(&app_config.database);
     // Redisクライアントを作成
     let kv = Arc::new(RedisClient::new(&app_config.redis)?);
-    // AppRegitry(DIコンテナ)を作成
-    let registry = AppRegistry::new(pool, kv, app_config);
+    // AppRegistry(DIコンテナ)を作成
+    let registry = Arc::new(AppRegistryImpl::new(pool, kv, app_config));
 
     // ヘルスチェック用のルーターを作成
     // ルーターのStateにAppRegistryを登録し、各ハンドラで使えるようにする

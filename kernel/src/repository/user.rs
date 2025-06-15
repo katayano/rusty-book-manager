@@ -10,6 +10,7 @@ use crate::model::{
 };
 use shared::error::AppResult;
 
+#[mockall::automock]
 #[async_trait]
 pub trait UserRepository: Send + Sync {
     /// ユーザーを登録する
