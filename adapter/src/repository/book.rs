@@ -236,20 +236,14 @@ impl BookRepositoryImpl {
 
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr;
+
     use super::*;
     use crate::repository::user::UserRepositoryImpl;
     use kernel::{model::user::event::CreateUser, repository::user::UserRepository};
 
-    #[sqlx::test]
+    #[sqlx::test(fixtures("common"))]
     async fn test_create_book(pool: sqlx::PgPool) -> anyhow::Result<()> {
-        sqlx::query!(
-            r#"
-            INSERT INTO roles(name) VALUES ('Admin'), ('User')
-            "#,
-        )
-        .execute(&pool)
-        .await?;
-
         // RepositoryImplを初期化
         let user_repository = UserRepositoryImpl::new(ConnectionPool::new(pool.clone()));
         let repository = BookRepositoryImpl::new(ConnectionPool::new(pool));
@@ -303,6 +297,34 @@ mod tests {
         assert_eq!(isbn, "Test ISBN");
         assert_eq!(description, "Test Description");
         assert_eq!(owner.name, user.name);
+        Ok(())
+    }
+
+    #[sqlx::test(fixtures("common", "book"))]
+    async fn test_update_book(pool: sqlx::PgPool) -> anyhow::Result<()> {
+        // RepositoryImplを初期化
+        let repository = BookRepositoryImpl::new(ConnectionPool::new(pool.clone()));
+
+        // 更新する書籍のIDを指定
+        let book_id = BookId::from_str("9890736e-a4e4-461a-a77d-eac3517ef11b").unwrap();
+        let book = repository.find_by_id(book_id).await?.unwrap();
+        const NEW_AUTHOR: &str = "New Author";
+        assert_ne!(book.author, NEW_AUTHOR);
+
+        // 書籍を更新
+        let update_book = UpdateBook {
+            book_id: book.id,
+            title: book.title,
+            author: NEW_AUTHOR.into(), // 更新箇所
+            isbn: book.isbn,
+            description: book.description,
+            requested_user: UserId::from_str("5b4c96ac-316a-4bee-8e69-cac5eb84ff4c").unwrap(),
+        };
+        repository.update(update_book).await?;
+
+        // 書籍を再度取得し、更新が反映されていることを確認
+        let updated_book = repository.find_by_id(book_id).await?.unwrap();
+        assert_eq!(updated_book.author, NEW_AUTHOR);
         Ok(())
     }
 }
