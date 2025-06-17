@@ -15,6 +15,8 @@ use tower_http::LatencyUnit;
 use tower_http::cors::{self, CorsLayer};
 use tower_http::trace::{DefaultMakeSpan, DefaultOnRequest, DefaultOnResponse, TraceLayer};
 use tracing::Level;
+#[cfg(not(debug_assertions))]
+use tracing::subscriber;
 use tracing_subscriber::EnvFilter;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
@@ -39,6 +41,10 @@ fn init_logger() -> Result<()> {
         .with_file(true)
         .with_line_number(true)
         .with_target(false);
+
+    #[cfg(not(debug_assertions))]
+    // リリースビルドではJSON形式でログを出力
+    let subscriber = subscriber.json();
 
     // ロガーを初期化
     tracing_subscriber::registry()
