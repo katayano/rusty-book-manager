@@ -7,6 +7,7 @@ use adapter::{database::connect_database_with, redis::RedisClient};
 use anyhow::{Context, Result};
 use api::route::{auth::build_auth_routers, v1};
 use axum::{Router, http::Method};
+use opentelemetry::global;
 use registry::AppRegistryImpl;
 use shared::config::AppConfig;
 use shared::env::{Environment, which};
@@ -33,6 +34,26 @@ fn init_logger() -> Result<()> {
         Environment::Development => "debug",
         Environment::Production => "info",
     };
+
+    // 環境変数の読み込み
+    let host = std::env::var("JAEGER_HOST")?;
+    let port = std::env::var("JAEGER_PORT")?;
+    let endpoint = format!("{host}:{port}");
+
+    global::set_text_map_propagator(opentelemetry_jaeger::Propagator::new());
+    let tracer = opentelemetry_jaeger::new_agent_pipeline()
+        // 以下、tracerの設定
+        .with_endpoint(endpoint)
+        .with_service_name("book-manager")
+        .with_auto_split_batch(true)
+        // このくらいのbytesを送れればいいという値
+        // 足りないとエラーになる
+        .with_max_packet_size(8192)
+        .install_simple()?;
+
+    // tracingとopentelemetryをブリッジさせる設定(layer)
+    let opentelemetry = tracing_opentelemetry::layer().with_tracer(tracer);
+
     // ログレベルを設定
     let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| log_level.into());
 
@@ -50,6 +71,7 @@ fn init_logger() -> Result<()> {
     tracing_subscriber::registry()
         .with(subscriber)
         .with(env_filter)
+        .with(opentelemetry)
         .try_init()?;
     Ok(())
 }
@@ -92,6 +114,7 @@ async fn bootstrap() -> Result<()> {
     tracing::info!("Listening on {}", addr);
 
     axum::serve(listener, app)
+        .with_graceful_shutdown(shutdown_signal())
         .await
         .context("Unexpected error occurred in server")
         // 起動失敗した際のエラーログを出力
@@ -109,4 +132,40 @@ fn cors() -> CorsLayer {
         .allow_headers(cors::Any)
         .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE])
         .allow_origin(cors::Any)
+}
+
+async fn shutdown_signal() {
+    fn purge_spans() {
+        global::shutdown_tracer_provider();
+    }
+
+    // Ctrl-Cで終了した際にトレースをパージする
+    let ctrl_c = async {
+        tokio::signal::ctrl_c()
+            .await
+            .expect("Failed to install Ctrl-C handler");
+    };
+
+    #[cfg(unix)]
+    let terminate = async {
+        tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+            .expect("Failed to install terminate handler")
+            .recv()
+            .await
+            .expect("Failed to receive terminate signal");
+    };
+
+    #[cfg(not(unix))]
+    let terminate = std::future::pending();
+
+    tokio::select! {
+        _ = ctrl_c => {
+            tracing::info!("Received Ctrl-C, shutting down...");
+            purge_spans();
+        }
+        _ = terminate => {
+            tracing::info!("Received terminate signal, shutting down...");
+            purge_spans();
+        }
+    }
 }

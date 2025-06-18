@@ -37,7 +37,14 @@ JAEGER_PORT = 6831
 
 # ビルド前にnameで指定したタスクを実行
 [tasks.before-build]
-run_task = [{ name = ["compose-up-db", "migrate", "compose-up-redis"] }]
+run_task = [
+    { name = [
+        "compose-up-db",
+        "migrate",
+        "compose-up-redis",
+        "compose-up-jaeger",
+    ] },
+]
 
 # docker compose buildでRustプロセスのイメージ作成
 [tasks.compose-build-app]
@@ -230,3 +237,8 @@ fn main() {
     println!("{}", hashed);
 }
 '''
+
+[tasks.compose-up-jaeger]
+extend = "set-env-docker"
+command = "docker"
+args = ["compose", "up", "-d", "jaeger"]

@@ -24,6 +24,7 @@ services:
     depends_on:
       - redis
       - postgres
+      - jaeger
 
   redis:
     image: redis:alpine
@@ -51,6 +52,16 @@ services:
       retries: 5
       start_period: 30s
 
+  jaeger:
+    image: jaegertracing/all-in-one:${JAEGER_VERSION:-latest}
+    ports:
+      - "16686:16686"
+      - "6821:6831/udp"
+      - "6832:6832/udp"
+      - "14268:14268"
+    environment:
+      - LOG_LEVEL=debug
+      
 volumes:
   db:
     driver: local

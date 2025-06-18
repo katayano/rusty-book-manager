@@ -70,9 +70,11 @@ tracing.workspace = true
 tower-http = { version = "0.6.2", features = ["cors", "trace"] }
 utoipa-redoc = { version = "6.0.0", features = ["axum"] }
 tracing-subscriber = { version = "0.3.19", features = ["env-filter", "json"] }
-opentelemetry = "0.29.1"
-tracing-opentelemetry = "0.30.0"
-opentelemetry-jaeger = { version = "0.22.0", features = ["rt-tokio"] }
+# opentelemetry関連は書籍とバージョンを合わせる
+opentelemetry = "0.21.0"
+tracing-opentelemetry = "0.22.0"
+opentelemetry-jaeger = { version = "0.20.0", features = ["rt-tokio"] }
+opentelemetry_sdk = { version = "0.21.2", features = ["rt-tokio"] }
 
 [profile.dev.package.sqlx-macros]
 opt-level = 3
