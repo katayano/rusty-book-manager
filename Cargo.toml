@@ -43,6 +43,7 @@ uuid = { version = "1.16.0", features = ["v4", "serde"] }
 serde = { version = "1.0.219", features = ["derive"] }
 thiserror = "2.0.12"
 utoipa = { version = "5.3.1", features = ["axum_extras", "uuid", "chrono"] }
+utoipa-redoc = { version = "6.0.0", features = ["axum"] }
 chrono = { version = "0.4.41", default-features = false, features = ["serde"] }
 secrecy = "0.10.3"
 strum = { version = "0.27.1", features = ["derive"] }
@@ -65,10 +66,10 @@ anyhow.workspace = true
 tokio.workspace = true
 axum.workspace = true
 utoipa.workspace = true
+utoipa-redoc.workspace = true
 tracing.workspace = true
 
 tower-http = { version = "0.6.2", features = ["cors", "trace"] }
-utoipa-redoc = { version = "6.0.0", features = ["axum"] }
 tracing-subscriber = { version = "0.3.19", features = ["env-filter", "json"] }
 # opentelemetry関連は書籍とバージョンを合わせる
 opentelemetry = "0.21.0"

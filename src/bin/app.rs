@@ -5,6 +5,8 @@ use std::{
 
 use adapter::{database::connect_database_with, redis::RedisClient};
 use anyhow::{Context, Result};
+#[cfg(debug_assertions)]
+use api::openapi::ApiDoc;
 use api::route::{auth::build_auth_routers, v1};
 use axum::{Router, http::Method};
 use opentelemetry::global;
@@ -21,6 +23,10 @@ use tracing::subscriber;
 use tracing_subscriber::EnvFilter;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
+#[cfg(debug_assertions)]
+use utoipa::OpenApi;
+#[cfg(debug_assertions)]
+use utoipa_redoc::{Redoc, Servable};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -92,6 +98,8 @@ async fn bootstrap() -> Result<()> {
     let app = Router::new()
         .merge(v1::routes())
         .merge(build_auth_routers())
+        // Redocのドキュメントが生成される
+        .merge(Redoc::with_url("/docs", ApiDoc::openapi()))
         // CORSの設定
         .layer(cors())
         // リクエストとレスポンス時にログ出力するレイヤーを追加
